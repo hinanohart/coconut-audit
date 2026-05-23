@@ -110,3 +110,28 @@ def test_build_linear_sae_handles_aliased_keys_and_orientation() -> None:
 def test_build_linear_sae_missing_key_errors_loudly() -> None:
     with pytest.raises(KeyError, match="W_enc"):
         build_linear_sae({}, {"d_in": 4, "d_sae": 16})
+
+
+def test_find_weights_refuses_pickle_pt(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """SECURITY policy: pickle-backed .pt artifacts must be refused with a clear message."""
+    from coconut_audit.sae.loader import _find_weights
+
+    (tmp_path / "model.pt").write_bytes(b"\x80\x04N.")  # fake pickle bytes
+    with pytest.raises(FileNotFoundError, match="pickle-backed"):
+        _find_weights(tmp_path)
+
+
+def test_find_weights_missing_returns_clear_error(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from coconut_audit.sae.loader import _find_weights
+
+    with pytest.raises(FileNotFoundError, match="no .safetensors"):
+        _find_weights(tmp_path)
+
+
+def test_find_weights_prefers_canonical_filename(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from coconut_audit.sae.loader import _find_weights
+
+    (tmp_path / "alt.safetensors").write_bytes(b"\x00")
+    (tmp_path / "sae_weights.safetensors").write_bytes(b"\x00")
+    picked = _find_weights(tmp_path)
+    assert picked.name == "sae_weights.safetensors"

@@ -50,9 +50,21 @@ class SteeringProbe:
                 f"must match clean leading dims {tuple(clean_activations.shape[:-1])}"
             )
 
+        latent_mask = token_kind_mask == 0
+        cot_mask = token_kind_mask == 1
+        if int(latent_mask.sum()) == 0:
+            raise ValueError(
+                "token_kind_mask has no latent tokens (mask==0); cannot compute "
+                "latent sensitivity. Pass at least one latent token to audit."
+            )
+        if int(cot_mask.sum()) == 0:
+            raise ValueError(
+                "token_kind_mask has no explicit-CoT tokens (mask==1); cannot compute "
+                "the comparison baseline."
+            )
         delta = (perturbed_activations - clean_activations).norm(dim=-1)  # [N, T]
-        latent_delta = float(delta[token_kind_mask == 0].mean())
-        cot_delta = float(delta[token_kind_mask == 1].mean())
+        latent_delta = float(delta[latent_mask].mean())
+        cot_delta = float(delta[cot_mask].mean())
         ratio = latent_delta / max(cot_delta, self.eps)
         return {
             "latent_sensitivity": latent_delta,

@@ -81,3 +81,53 @@ def test_latent_extractor_attach_and_detach_lifecycle() -> None:
     assert len(leaf._hooks) == 1
     ex.detach()
     assert leaf._hooks == []
+
+
+def test_hf_inference_client_blocked_by_env_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """COCONUT_AUDIT_SKIP_HF_DOWNLOAD=1 must hard-block HFInferenceClient.load."""
+    from coconut_audit.probe.client import HFInferenceClient
+
+    monkeypatch.setenv("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "1")
+    with pytest.raises(RuntimeError, match="COCONUT_AUDIT_SKIP_HF_DOWNLOAD"):
+        HFInferenceClient(model_id="gpt2").load()
+
+
+def test_hf_inference_client_falls_back_to_legacy_torch_dtype_keyword(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """transformers <5 uses `torch_dtype=`; the client must retry on TypeError."""
+    from coconut_audit.probe.client import HFInferenceClient
+
+    monkeypatch.setenv("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "0")
+    calls: list[dict[str, Any]] = []
+
+    class _FakeTokenizer:
+        @classmethod
+        def from_pretrained(cls, _model_id: str, **_kwargs: Any) -> Any:
+            return object()
+
+    class _FakeModel:
+        def to(self, _device: str) -> Any:
+            return self
+
+        def eval(self) -> None:
+            pass
+
+    class _FakeAutoModel:
+        @classmethod
+        def from_pretrained(cls, _model_id: str, **kwargs: Any) -> Any:
+            calls.append(kwargs)
+            if "dtype" in kwargs:
+                raise TypeError("unexpected keyword 'dtype'")
+            return _FakeModel()
+
+    import transformers
+
+    monkeypatch.setattr(transformers, "AutoTokenizer", _FakeTokenizer)
+    monkeypatch.setattr(transformers, "AutoModelForCausalLM", _FakeAutoModel)
+
+    HFInferenceClient(model_id="gpt2", dtype="float32").load()
+    assert len(calls) == 2
+    assert "dtype" in calls[0]
+    assert "torch_dtype" in calls[1]
+    assert "dtype" not in calls[1]

@@ -46,7 +46,9 @@ Out of scope:
   declared `d_in` / `d_sae` before construction. Treat unknown SAEs as
   untrusted code-adjacent artifacts even when they ship as safetensors.
 - `reports.render_html_report` HTML-escapes every user-controlled field via
-  `jinja2`'s autoescape. We inherit the lesson from `recurrentlens 0.1.0.post1`
-  (an XSS vector in unescaped report fields). Do not disable autoescape.
+  stdlib `html.escape(..., quote=True)`. We inherit the XSS-hotfix lesson
+  from `recurrentlens 0.1.0.post1` (an unescaped field XSS vector) but
+  tighten it: the escape policy is grep-auditable on every field, rather
+  than depending on a template-engine autoescape config.
 - The MCP server is `stdio`-only by default. If you expose it over a network
   transport, gate it behind your own authentication layer.

@@ -12,10 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial scaffold of the `coconut-audit` framework.
 - `core`: `LatentTrace`, `AuditReport`, `AuditVerdict`, `ProbeKind` types; `AuditConfig` loader (pydantic v2).
 - `probe`: `HFInferenceClient`, `LatentExtractor`, `HookRegistry` for Coconut / Quiet-STaR / Test-Time-Compute families.
-- `sae`: `PretrainedSAELoader` + `FeatureProjector` against HuggingFace Hub. License-clean primary targets: GPT-2 small (SAELens), Pythia 70M/160M (EleutherAI `sparsify`), DeepSeek-R1 (Goodfire).
+- `sae`: `PretrainedSAELoader` + `FeatureProjector` against HuggingFace Hub. Safetensors-only loader policy (pickle `.pt` is refused). License-clean primary targets (safetensors-shipping): GPT-2 small (SAELens), Pythia 70M/160M (EleutherAI `sparsify`), Llama Scope (fnlp), Gemma Scope (google). Goodfire DeepSeek-R1 is deferred to v0.1.1+ (upstream ships only `.pt`).
 - `audit`: `SteeringProbe`, `ShortcutDetector`, `DriftScorer`, `aggregate_verdict` (4-way verdict: `PASS` / `WARN` / `FAIL` / `NO_VERDICT`).
 - `mcp`: stdio MCP server exposing `audit_run`, `audit_get`, `audit_diff` tools.
-- `reports`: JSON + HTML (Jinja2 autoescape) + JSONL append-only ledger.
+- `reports`: JSON + HTML (stdlib `html.escape(..., quote=True)` per-field) + JSONL append-only ledger.
 - `cli`: `coconut-audit run / get / diff` entrypoints (click).
 - CI (ruff format/lint, no-secrets grep, pytest matrix on Python 3.11 + 3.12).
 - Pre-commit hooks.

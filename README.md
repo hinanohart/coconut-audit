@@ -32,16 +32,22 @@ uv pip install "coconut-audit[datasets]"      # + MMLU / HotpotQA shortcut fixtu
 ## Quick start (CLI)
 
 ```bash
-# 1. Run an audit against a HF model with a pretrained SAE
+# 1. Run an audit (v0.1.0 ships demo_mode by default — synthetic activations
+#    drive the probes so the end-to-end pipeline is exercisable without a
+#    model download). Real-model inference lands in v0.1.1+.
 coconut-audit run \
-  --model Goodfire/DeepSeek-R1-SAE-l37 \
+  --model gpt2 \
+  --sae jbloom/GPT2-Small-SAEs \
   --probe shortcut \
-  --benchmark mmlu \
-  --out audit_reports/deepseek_r1.json
+  --out-dir audit_reports/
 
 # 2. View the human-readable HTML report
-open audit_reports/deepseek_r1.html
+open audit_reports/<audit_id>.html
 ```
+
+> **Note**: v0.1.0 runs synthetic activations (`demo_mode=True`); pass `--real`
+> to see the `NotImplementedError` placeholder for the v0.1.1+ real-model path.
+> Verdicts from synthetic runs are advisory only — re-run on every release.
 
 ## Quick start (MCP — call from Claude / Cursor / Cline)
 
@@ -84,8 +90,8 @@ Qwen-Scope, Gemma Scope 2) land in v0.1.1+. PRs welcome.
 
 | Repo | Layer | Relation |
 |---|---|---|
-| [recurrentlens](https://github.com/hinanohart/recurrentlens) | Representation-side SAE framework (SSM-first) | Upstream for v0.2 SSM backend |
-| [subjunctor](https://github.com/hinanohart/subjunctor) | LLM agent counterfactual gate | Downstream MCP client |
+| [recurrentlens](https://github.com/hinanohart/recurrentlens) | Representation-side SAE framework (SSM-first) | Upstream SAE backend for v0.2 SSM models |
+| [subjunctor](https://github.com/hinanohart/subjunctor) | Agent-side counterfactual gate (TS) | Conceptual sibling (alignment plumbing; MCP integration planned for subjunctor v0.4) |
 | [exitkit](https://github.com/hinanohart/exitkit) | Nozick-style closest-continuer over snapshots | Conceptual sibling (alignment plumbing) |
 
 ## Design honesty

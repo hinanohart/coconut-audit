@@ -76,3 +76,13 @@ def test_html_report_metric_attribute_quote_escaping(tmp_path: Path) -> None:
     html = out.read_text("utf-8")
     assert 'attr="injected"' not in html
     assert "attr=&quot;injected&quot;" in html
+
+
+def test_html_report_escapes_benchmark_field(tmp_path: Path) -> None:
+    """`benchmark` is optional but user-controlled — must be escaped too."""
+    payload = "<script>alert('benchmark-xss')</script>"
+    r = _report(benchmark=payload)
+    out = render_html_report(r, tmp_path / "r.html")
+    html = out.read_text("utf-8")
+    assert "<script>" not in html
+    assert "&lt;script&gt;alert(&#x27;benchmark-xss&#x27;)&lt;/script&gt;" in html

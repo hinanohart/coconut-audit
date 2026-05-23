@@ -38,6 +38,28 @@ def test_steering_probe_shape_validation() -> None:
         probe.run(torch.zeros(1, 2, 3), torch.zeros(1, 2, 3), torch.zeros(1, 3))
 
 
+def test_steering_probe_rejects_empty_latent_mask() -> None:
+    probe = SteeringProbe()
+    # All-CoT mask: zero latent tokens.
+    with pytest.raises(ValueError, match="no latent tokens"):
+        probe.run(
+            torch.zeros(1, 4, 3),
+            torch.zeros(1, 4, 3),
+            torch.ones(1, 4, dtype=torch.int),
+        )
+
+
+def test_steering_probe_rejects_empty_cot_mask() -> None:
+    probe = SteeringProbe()
+    # All-latent mask: zero CoT tokens (no comparison baseline).
+    with pytest.raises(ValueError, match="no explicit-CoT tokens"):
+        probe.run(
+            torch.zeros(1, 4, 3),
+            torch.zeros(1, 4, 3),
+            torch.zeros(1, 4, dtype=torch.int),
+        )
+
+
 def test_shortcut_detector_gap() -> None:
     id_correct = torch.tensor([1, 1, 1, 1, 0])
     ood_correct = torch.tensor([1, 0, 0, 0, 0])

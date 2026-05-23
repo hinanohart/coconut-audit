@@ -8,6 +8,7 @@ benchmark loop) lands in v0.1.1+.
 
 from __future__ import annotations
 
+import json
 import uuid
 from pathlib import Path
 
@@ -22,7 +23,7 @@ from coconut_audit.audit import (
     label_for_metric,
 )
 from coconut_audit.core import AuditConfig, AuditReport
-from coconut_audit.core.types import AuditVerdict, ProbeKind
+from coconut_audit.core.types import ProbeKind
 from coconut_audit.reports.jsonl import LedgerWriter
 
 
@@ -136,8 +137,6 @@ def diff_reports(a: AuditReport, b: AuditReport) -> dict[str, object]:
 
 def find_report_in_ledger(ledger_path: Path, audit_id: str) -> AuditReport:
     """Load the first `AuditReport` matching `audit_id` from a JSONL ledger."""
-    import json
-
     if not ledger_path.exists():
         raise FileNotFoundError(f"ledger not found: {ledger_path}")
     with ledger_path.open("r", encoding="utf-8") as fh:
@@ -149,8 +148,3 @@ def find_report_in_ledger(ledger_path: Path, audit_id: str) -> AuditReport:
             if obj.get("audit_id") == audit_id:
                 return AuditReport.model_validate(obj)
     raise KeyError(f"audit_id {audit_id!r} not found in {ledger_path}")
-
-
-def _resolve_verdict(_: str) -> AuditVerdict:
-    """Re-export hint for callers that want the enum."""
-    return AuditVerdict.NO_VERDICT
