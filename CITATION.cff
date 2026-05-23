@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use coconut-audit in academic work, please cite it as below."
+title: "coconut-audit: audit harness for continuous-latent chain-of-thought"
+authors:
+  - family-names: "hinanohart"
+version: 0.1.0
+date-released: 2026-05-23
+license: Apache-2.0
+repository-code: "https://github.com/hinanohart/coconut-audit"
+keywords:
+  - mechanistic-interpretability
+  - sparse-autoencoder
+  - continuous-latent-reasoning
+  - coconut
+  - alignment
+  - audit
+references:
+  - type: article
+    authors:
+      - family-names: "Zhang"
+        given-names: "Yuyi"
+      - family-names: "Tang"
+        given-names: "Boyu"
+      - family-names: "Ju"
+        given-names: "Tianjie"
+      - family-names: "Duan"
+        given-names: "Sufeng"
+      - family-names: "Liu"
+        given-names: "Gongshen"
+    title: "Do Latent Tokens Think? A Causal and Adversarial Analysis of Chain-of-Continuous-Thought"
+    year: 2025
+    url: "https://arxiv.org/abs/2512.21711"
+  - type: article
+    authors:
+      - family-names: "Hao"
+        given-names: "Shibo"
+    title: "Training Large Language Models to Reason in a Continuous Latent Space"
+    year: 2024
+    url: "https://arxiv.org/abs/2412.06769"
+notes: |
+  v0.1.0 ships the audit framework + 3 license-clean pretrained-SAE adapters
+  (GPT-2 small, Pythia, DeepSeek-R1). Extended coverage (Llama Scope, Gemma
+  Scope, Qwen-Scope, Goodfire Instruct lines) lands in v0.1.1+.
