@@ -136,15 +136,27 @@ def diff_reports(a: AuditReport, b: AuditReport) -> dict[str, object]:
 
 
 def find_report_in_ledger(ledger_path: Path, audit_id: str) -> AuditReport:
-    """Load the first `AuditReport` matching `audit_id` from a JSONL ledger."""
+    """Load the first `AuditReport` matching `audit_id` from a JSONL ledger.
+
+    A corrupt line is surfaced as a typed `RuntimeError` (with the offending
+    line number) instead of a raw `json.JSONDecodeError`, which would leak
+    file offsets through the MCP error payload.
+    """
     if not ledger_path.exists():
         raise FileNotFoundError(f"ledger not found: {ledger_path}")
     with ledger_path.open("r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
+        for lineno, raw in enumerate(fh, start=1):
+            line = raw.strip()
             if not line:
                 continue
-            obj = json.loads(line)
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise RuntimeError(
+                    f"corrupt JSONL at {ledger_path}:{lineno} ({e.msg}); "
+                    "likely a concurrent-write interleave from a pre-0.1.0.post1 "
+                    "writer — see LedgerWriter locking notes."
+                ) from e
             if obj.get("audit_id") == audit_id:
                 return AuditReport.model_validate(obj)
     raise KeyError(f"audit_id {audit_id!r} not found in {ledger_path}")

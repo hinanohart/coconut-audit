@@ -135,3 +135,43 @@ def test_find_weights_prefers_canonical_filename(tmp_path) -> None:  # type: ign
     (tmp_path / "sae_weights.safetensors").write_bytes(b"\x00")
     picked = _find_weights(tmp_path)
     assert picked.name == "sae_weights.safetensors"
+
+
+def test_build_linear_sae_rejects_square_without_weight_layout() -> None:
+    """d_in == d_sae is shape-ambiguous; require explicit layout to avoid silent corruption."""
+    d = 8
+    state = {
+        "W_enc": torch.randn(d, d),
+        "b_enc": torch.zeros(d),
+        "W_dec": torch.randn(d, d),
+        "b_dec": torch.zeros(d),
+    }
+    with pytest.raises(ValueError, match="weight_layout"):
+        build_linear_sae(state, {"d_in": d, "d_sae": d})
+
+
+def test_build_linear_sae_square_with_explicit_layout_in_first() -> None:
+    d = 8
+    state = {
+        "W_enc": torch.randn(d, d),
+        "b_enc": torch.zeros(d),
+        "W_dec": torch.randn(d, d),
+        "b_dec": torch.zeros(d),
+    }
+    sae = build_linear_sae(state, {"d_in": d, "d_sae": d, "weight_layout": "in_first"})
+    assert sae.W_enc.shape == (d, d)
+
+
+def test_orient_rejects_non_2d_tensor() -> None:
+    from coconut_audit.sae.loader import _orient
+
+    with pytest.raises(ValueError, match="must be 2D"):
+        _orient(torch.zeros(2, 3, 4), expected_rows=2, expected_cols=3)
+
+
+def test_orient_rejects_mismatched_shape() -> None:
+    """Neither orientation matches → ValueError instead of silent corruption."""
+    from coconut_audit.sae.loader import _orient
+
+    with pytest.raises(ValueError, match="does not match"):
+        _orient(torch.zeros(5, 7), expected_rows=4, expected_cols=16)

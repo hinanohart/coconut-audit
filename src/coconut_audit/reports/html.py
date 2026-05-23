@@ -30,9 +30,17 @@ _CSS = (
     ".WARN{background:#fef7e0;color:#b06000}"
     ".FAIL{background:#fce8e6;color:#c5221f}"
     ".NO_VERDICT{background:#f1f3f4;color:#5f6368}"
+    ".demo-banner{background:#fff3cd;color:#664d03;padding:0.8em 1em;"
+    "border:2px solid #b08800;border-radius:6px;margin-bottom:1em;"
+    "font-weight:600}"
     "table{border-collapse:collapse;margin-top:1em}"
     "th,td{border:1px solid #dadce0;padding:0.4em 0.8em;text-align:left}"
 )
+
+
+def _is_demo_report(report: AuditReport) -> bool:
+    """A report is a demo-mode synthetic run if any note advertises it."""
+    return any("demo_mode=True" in n for n in report.notes)
 
 
 def render_html_report(report: AuditReport, path: str | Path) -> Path:
@@ -47,12 +55,24 @@ def render_html_report(report: AuditReport, path: str | Path) -> Path:
         '<html lang="en"><head><meta charset="utf-8">',
         f"<title>coconut-audit report — {_e(report.audit_id)}</title>",
         f"<style>{_CSS}</style></head><body>",
-        "<h1>coconut-audit report</h1>",
-        f"<p><strong>Audit ID:</strong> {_e(report.audit_id)}</p>",
-        f"<p><strong>Model:</strong> {_e(report.model_id)}</p>",
-        f"<p><strong>SAE:</strong> {_e(report.sae_id)}</p>",
-        f"<p><strong>Probe:</strong> {_e(report.probe_kind.value)}</p>",
     ]
+    if _is_demo_report(report):
+        parts.append(
+            '<div class="demo-banner">'
+            "⚠ DEMO MODE — verdict is computed from SYNTHETIC activations "
+            "(<code>torch.randn</code> seed). "
+            "v0.1.x does not exercise real-model inference; treat as advisory only."
+            "</div>"
+        )
+    parts.extend(
+        [
+            "<h1>coconut-audit report</h1>",
+            f"<p><strong>Audit ID:</strong> {_e(report.audit_id)}</p>",
+            f"<p><strong>Model:</strong> {_e(report.model_id)}</p>",
+            f"<p><strong>SAE:</strong> {_e(report.sae_id)}</p>",
+            f"<p><strong>Probe:</strong> {_e(report.probe_kind.value)}</p>",
+        ]
+    )
     if report.benchmark:
         parts.append(f"<p><strong>Benchmark:</strong> {_e(report.benchmark)}</p>")
     parts.extend(

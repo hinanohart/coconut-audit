@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from coconut_audit.core.types import AuditReport, AuditVerdict, ProbeKind
 from coconut_audit.reports import (
     LedgerWriter,
@@ -86,3 +88,30 @@ def test_html_report_escapes_benchmark_field(tmp_path: Path) -> None:
     html = out.read_text("utf-8")
     assert "<script>" not in html
     assert "&lt;script&gt;alert(&#x27;benchmark-xss&#x27;)&lt;/script&gt;" in html
+
+
+def test_html_report_emits_demo_banner_when_notes_advertise_demo_mode(tmp_path: Path) -> None:
+    """demo_mode=True notes must surface a prominent banner (not just a bottom bullet)."""
+    r = _report(notes=["demo_mode=True (v0.1.0 synthetic pipeline)"])
+    out = render_html_report(r, tmp_path / "r.html")
+    html = out.read_text("utf-8")
+    assert 'class="demo-banner"' in html
+    # banner sits BEFORE the verdict pill so screenshots cannot crop it out.
+    assert html.index('class="demo-banner"') < html.index('class="verdict')
+
+
+def test_html_report_omits_demo_banner_for_real_reports(tmp_path: Path) -> None:
+    r = _report(notes=["real-model run; benchmark=mmlu_subset"])
+    out = render_html_report(r, tmp_path / "r.html")
+    html = out.read_text("utf-8")
+    # CSS always defines `.demo-banner`; the rendered <div> must NOT instantiate it.
+    assert '<div class="demo-banner">' not in html
+
+
+def test_audit_report_is_frozen() -> None:
+    """AuditReport must reject post-construction mutation (matches LatentTrace)."""
+    from pydantic import ValidationError
+
+    r = _report()
+    with pytest.raises(ValidationError):
+        r.verdict = AuditVerdict.FAIL  # type: ignore[misc]

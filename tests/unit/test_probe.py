@@ -92,10 +92,15 @@ def test_hf_inference_client_blocked_by_env_flag(monkeypatch: pytest.MonkeyPatch
         HFInferenceClient(model_id="gpt2").load()
 
 
-def test_hf_inference_client_falls_back_to_legacy_torch_dtype_keyword(
+def test_hf_inference_client_picks_dtype_kw_by_transformers_major(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """transformers <5 uses `torch_dtype=`; the client must retry on TypeError."""
+    """transformers >=5 → `dtype=`; transformers 4.x → `torch_dtype=` (no try/except).
+
+    The previous v0.1.0 implementation used `try/except TypeError`, but real
+    transformers absorbs both kwargs through `**kwargs` and never raises —
+    the fallback was dead code. v0.1.0.post1 dispatches by major version.
+    """
     from coconut_audit.probe.client import HFInferenceClient
 
     monkeypatch.setenv("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "0")
@@ -117,8 +122,6 @@ def test_hf_inference_client_falls_back_to_legacy_torch_dtype_keyword(
         @classmethod
         def from_pretrained(cls, _model_id: str, **kwargs: Any) -> Any:
             calls.append(kwargs)
-            if "dtype" in kwargs:
-                raise TypeError("unexpected keyword 'dtype'")
             return _FakeModel()
 
     import transformers
@@ -126,8 +129,23 @@ def test_hf_inference_client_falls_back_to_legacy_torch_dtype_keyword(
     monkeypatch.setattr(transformers, "AutoTokenizer", _FakeTokenizer)
     monkeypatch.setattr(transformers, "AutoModelForCausalLM", _FakeAutoModel)
 
+    # Pretend transformers 5.x is installed.
+    monkeypatch.setattr(transformers, "__version__", "5.9.0")
     HFInferenceClient(model_id="gpt2", dtype="float32").load()
-    assert len(calls) == 2
-    assert "dtype" in calls[0]
-    assert "torch_dtype" in calls[1]
-    assert "dtype" not in calls[1]
+    assert calls[-1].get("dtype") is not None
+    assert "torch_dtype" not in calls[-1]
+
+    # Pretend transformers 4.x is installed.
+    calls.clear()
+    monkeypatch.setattr(transformers, "__version__", "4.45.2")
+    HFInferenceClient(model_id="gpt2", dtype="float32").load()
+    assert calls[-1].get("torch_dtype") is not None
+    assert "dtype" not in calls[-1]
+
+
+def test_hf_inference_client_rejects_unknown_dtype(monkeypatch: pytest.MonkeyPatch) -> None:
+    from coconut_audit.probe.client import HFInferenceClient
+
+    monkeypatch.setenv("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "0")
+    with pytest.raises(ValueError, match="not in the allowed set"):
+        HFInferenceClient(model_id="gpt2", dtype="bf16").load()

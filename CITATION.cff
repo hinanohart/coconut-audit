@@ -3,8 +3,8 @@ message: "If you use coconut-audit in academic work, please cite it as below."
 title: "coconut-audit: audit harness for continuous-latent chain-of-thought"
 authors:
   - family-names: "hinanohart"
-version: 0.1.0
-date-released: 2026-05-23
+version: 0.1.0.post1
+date-released: 2026-05-24
 license: Apache-2.0
 repository-code: "https://github.com/hinanohart/coconut-audit"
 keywords:
@@ -38,6 +38,11 @@ references:
     year: 2024
     url: "https://arxiv.org/abs/2412.06769"
 notes: |
-  v0.1.0 ships the audit framework + 3 license-clean pretrained-SAE adapters
-  (GPT-2 small, Pythia, DeepSeek-R1). Extended coverage (Llama Scope, Gemma
-  Scope, Qwen-Scope, Goodfire Instruct lines) lands in v0.1.1+.
+  v0.1.0 ships the audit framework + safetensors-only SAE loader supporting
+  the GPT-2 small (SAELens) and Pythia (EleutherAI sparsify) families out of
+  the box; Llama Scope (fnlp) and Gemma Scope (google) load via the same path
+  once their cfg keys are pinned. Goodfire DeepSeek-R1, Goodfire Llama 3.x
+  Instruct, Qwen-Scope, and Gemma Scope 2 adapters await upstream safetensors
+  re-export (or a community conversion adapter) and land in v0.1.1+. v0.1.0
+  runs the audit pipeline in synthetic `demo_mode=True` only; real-model
+  inference (forward-hook + SAE encode + benchmark loop) lands in v0.1.1+.

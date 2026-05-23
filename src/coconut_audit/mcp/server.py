@@ -19,7 +19,12 @@ from coconut_audit.mcp.tools import audit_diff, audit_get, audit_run
 
 _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "audit_run": {
-        "description": "Run a fresh continuous-latent-CoT audit and append the report to the JSONL ledger.",
+        "description": (
+            "Run a fresh continuous-latent-CoT audit and append the report to the JSONL ledger. "
+            "v0.1.0 runs SYNTHETIC activations (demo_mode=True by default); verdicts are "
+            "advisory only and MUST NOT be cited as real-model evidence. Real-model "
+            "inference (forward-hook + SAE encode + benchmark loop) lands in v0.1.1+."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {

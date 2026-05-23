@@ -20,6 +20,12 @@ Recent work argues that continuous-latent reasoning (Coconut and successors) doe
 
 `coconut-audit` ships exactly that pipeline, with HuggingFace inference as the only required runtime.
 
+## Why not X
+
+- **Anthropic's Circuit Tracer** is a Claude-internal tool — not an OSS framework you can point at `gpt2` / `pythia-160m` / `Llama-3.1-8B` from your terminal.
+- **Goodfire Ember** is a closed-source platform targeting Llama-family models behind an API; `coconut-audit` is an Apache-2.0 framework you can pin in CI, run offline, and extend to new families via a small `_FAMILY_HOOK_SITES` entry.
+- **SAELens / sparsify** are excellent SAE training/inference libraries but stop short of an audit verdict; `coconut-audit` consumes their pretrained artifacts and adds the steering / shortcut / drift probes + MCP surface on top.
+
 ## Install
 
 ```bash

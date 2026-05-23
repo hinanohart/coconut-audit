@@ -1,8 +1,8 @@
 """HuggingFace inference client + activation-capturing forward pass.
 
 v0.1.0 supports local CPU/GPU inference via `transformers.AutoModelForCausalLM`.
-Remote `HF Inference API` lands in v0.2 (the API does not expose hidden-state
-hooks, so we keep it as an optional non-audit codepath only).
+The remote HF Inference API is intentionally **not** a v0.x target — the API
+does not expose hidden-state hooks, so it cannot drive an SAE-grounded audit.
 """
 
 from __future__ import annotations
@@ -38,9 +38,11 @@ class HFInferenceClient:
     def load(self) -> None:
         """Lazily load model + tokenizer. Honors `COCONUT_AUDIT_SKIP_HF_DOWNLOAD`.
 
-        Cross-version transformers: tries `dtype=` first (transformers >=5.0,
-        where `torch_dtype=` is deprecated) and falls back to `torch_dtype=`
-        for transformers 4.x.
+        Cross-version transformers: selects the dtype keyword via the installed
+        `transformers.__version__` major (>=5 uses `dtype=`; 4.x uses
+        `torch_dtype=`). `transformers` ≥5.x silently routes `torch_dtype=`
+        through `**kwargs` with a deprecation warning rather than raising
+        ``TypeError``, so a try/except cannot disambiguate the two versions.
         """
         if os.environ.get("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "0") == "1":
             raise RuntimeError(
@@ -48,28 +50,41 @@ class HFInferenceClient:
                 "(set in CI / offline mode). Unset to download the model."
             )
 
+        _ALLOWED_DTYPES = {
+            "auto",
+            "float32",
+            "float16",
+            "bfloat16",
+            "float64",
+            "int8",
+        }
+        if self.dtype not in _ALLOWED_DTYPES:
+            raise ValueError(
+                f"HFInferenceClient(dtype={self.dtype!r}) is not in the allowed "
+                f"set {sorted(_ALLOWED_DTYPES)}; pass a torch dtype name."
+            )
+
         import torch
+        import transformers
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         resolved_dtype: Any = "auto" if self.dtype == "auto" else getattr(torch, self.dtype)
+
+        try:
+            _major = int(transformers.__version__.split(".", 1)[0])
+        except (ValueError, AttributeError):
+            _major = 4  # treat unknown version strings as legacy
+        dtype_kw = "dtype" if _major >= 5 else "torch_dtype"
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_id,
             trust_remote_code=self.trust_remote_code,
         )
-        try:
-            model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                dtype=resolved_dtype,
-                trust_remote_code=self.trust_remote_code,
-            )
-        except TypeError:
-            # transformers <5.0 uses the legacy `torch_dtype=` keyword.
-            model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                torch_dtype=resolved_dtype,
-                trust_remote_code=self.trust_remote_code,
-            )
+        model = AutoModelForCausalLM.from_pretrained(
+            self.model_id,
+            **{dtype_kw: resolved_dtype},
+            trust_remote_code=self.trust_remote_code,
+        )
         self._model = model.to(self.device)
         self._model.eval()
 

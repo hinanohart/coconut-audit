@@ -4,9 +4,14 @@ Inherits the `recurrentlens 0.1.0.post1` hardening lesson: validate tensor
 shapes against declared `d_in` / `d_sae` before construction. Treat unknown
 SAEs as untrusted code-adjacent artifacts.
 
-v0.1.0 supports the Goodfire `.pt`-state-dict format directly. Adapters for
-SAELens (`sae-lens` optional extra) and EleutherAI sparsify (`sparsify`
-optional extra) are auto-detected when the dep is installed.
+v0.1.0 supports **safetensors only**; pickle-backed `.pt` artifacts are
+refused with an actionable error (see ``SECURITY.md`` and Trail of Bits'
+"pickles-in-pytorch" advisory). Goodfire / SAELens / EleutherAI sparsify
+safetensors layouts are auto-detected via the ``_KEY_ALIASES`` table.
+
+Known limitation: when ``d_in == d_sae`` (square 1× SAE) the weight
+orientation cannot be inferred from shape alone; callers must declare it
+explicitly via ``cfg["weight_layout"] in {"in_first", "out_first"}``.
 """
 
 from __future__ import annotations
@@ -39,13 +44,26 @@ def _pick(state_dict: dict[str, Any], canonical: str) -> Any:
     )
 
 
-def _orient(tensor: Any, expected_rows: int) -> Any:
-    """Return tensor oriented so that `tensor.shape[0] == expected_rows`."""
+def _orient(tensor: Any, expected_rows: int, expected_cols: int) -> Any:
+    """Return tensor oriented so that `tensor.shape[0] == expected_rows`.
+
+    Raises `ValueError` if the tensor is not 2D or if neither orientation
+    matches (`d_in` × `d_sae`) — silent transposition of a malformed weight
+    matrix would otherwise corrupt audit results downstream.
+    """
     if tensor.ndim != 2:
+        raise ValueError(
+            f"SAE weight tensor must be 2D, got ndim={tensor.ndim} (shape={tuple(tensor.shape)})"
+        )
+    rows, cols = int(tensor.shape[0]), int(tensor.shape[1])
+    if rows == expected_rows and cols == expected_cols:
         return tensor
-    if tensor.shape[0] == expected_rows:
-        return tensor
-    return tensor.T
+    if rows == expected_cols and cols == expected_rows:
+        return tensor.T
+    raise ValueError(
+        f"SAE weight tensor shape {tuple(tensor.shape)} does not match "
+        f"expected ({expected_rows}, {expected_cols}) in either orientation"
+    )
 
 
 @dataclass(slots=True)
@@ -121,8 +139,20 @@ def build_linear_sae(state_dict: dict[str, Any], cfg: dict[str, Any]) -> LinearS
     if d_sae == 0:
         d_sae = int(b_enc.shape[0])
 
-    W_enc = _orient(W_enc, d_in)
-    W_dec = _orient(W_dec, d_sae)
+    if d_in == d_sae:
+        layout = str(cfg.get("weight_layout") or "").lower()
+        if layout not in {"in_first", "out_first"}:
+            raise ValueError(
+                f"Square SAE (d_in == d_sae == {d_in}) is shape-ambiguous; "
+                "set cfg['weight_layout'] to 'in_first' (W_enc=[d_in, d_sae]) "
+                "or 'out_first' (W_enc=[d_sae, d_in]) to disambiguate."
+            )
+        if layout == "out_first":
+            W_enc = W_enc.T if W_enc.ndim == 2 else W_enc
+            W_dec = W_dec.T if W_dec.ndim == 2 else W_dec
+    else:
+        W_enc = _orient(W_enc, d_in, d_sae)
+        W_dec = _orient(W_dec, d_sae, d_in)
 
     return LinearSAE(
         W_enc=W_enc,

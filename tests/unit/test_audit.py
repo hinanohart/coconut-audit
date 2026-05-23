@@ -123,6 +123,23 @@ def test_label_for_metric_lower_is_worse() -> None:
     )
 
 
+def test_label_for_metric_nan_is_no_verdict() -> None:
+    """NaN must never silently classify as PASS in an audit tool."""
+    assert label_for_metric(float("nan"), warn_at=0.1, fail_at=0.3) == AuditVerdict.NO_VERDICT
+    assert label_for_metric(float("inf"), warn_at=0.1, fail_at=0.3) == AuditVerdict.NO_VERDICT
+    assert (
+        label_for_metric(float("nan"), warn_at=0.5, fail_at=0.3, higher_is_worse=False)
+        == AuditVerdict.NO_VERDICT
+    )
+
+
+def test_label_for_metric_rejects_inverted_thresholds() -> None:
+    with pytest.raises(ValueError, match="warn_at <= fail_at"):
+        label_for_metric(0.2, warn_at=0.3, fail_at=0.1)
+    with pytest.raises(ValueError, match="warn_at >= fail_at"):
+        label_for_metric(0.2, warn_at=0.1, fail_at=0.3, higher_is_worse=False)
+
+
 def test_aggregate_verdict_priority() -> None:
     pass_v = Verdict(label=AuditVerdict.PASS, metric_name="m", metric_value=0.0, threshold=0.1)
     warn_v = Verdict(label=AuditVerdict.WARN, metric_name="m", metric_value=0.2, threshold=0.1)

@@ -47,7 +47,7 @@ class LatentTrace(BaseModel):
 class AuditReport(BaseModel):
     """Top-level audit result. Emitted as JSON + HTML, appended to JSONL ledger."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: str = "0.1.0"
     audit_id: str
