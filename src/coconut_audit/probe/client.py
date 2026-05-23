@@ -1,20 +1,72 @@
-"""HuggingFace inference client (lazy loader for Phase 2 full implementation)."""
+"""HuggingFace inference client + activation-capturing forward pass.
+
+v0.1.0 supports local CPU/GPU inference via `transformers.AutoModelForCausalLM`.
+Remote `HF Inference API` lands in v0.2 (the API does not expose hidden-state
+hooks, so we keep it as an optional non-audit codepath only).
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(slots=True)
 class HFInferenceClient:
-    """Thin wrapper over `transformers.AutoModelForCausalLM`.
-
-    v0.1.0 skeleton: actual model load happens in `Phase 2` (see CHANGELOG).
-    """
+    """Wraps `transformers.AutoModelForCausalLM` + tokenizer with lazy loading."""
 
     model_id: str
     device: str = "cpu"
     dtype: str = "auto"
+    trust_remote_code: bool = False
+    _model: Any = field(default=None, init=False, repr=False)
+    _tokenizer: Any = field(default=None, init=False, repr=False)
 
-    def load(self) -> None:  # pragma: no cover - filled in Phase 2
-        raise NotImplementedError("HFInferenceClient.load lands in v0.1.0 Phase 2")
+    @property
+    def model(self) -> Any:
+        if self._model is None:
+            self.load()
+        return self._model
+
+    @property
+    def tokenizer(self) -> Any:
+        if self._tokenizer is None:
+            self.load()
+        return self._tokenizer
+
+    def load(self) -> None:
+        """Lazily load model + tokenizer. Honors `COCONUT_AUDIT_SKIP_HF_DOWNLOAD`."""
+        if os.environ.get("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "0") == "1":
+            raise RuntimeError(
+                "HFInferenceClient.load blocked by COCONUT_AUDIT_SKIP_HF_DOWNLOAD=1 "
+                "(set in CI / offline mode). Unset to download the model."
+            )
+
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        torch_dtype: Any = "auto" if self.dtype == "auto" else getattr(torch, self.dtype)
+
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.model_id,
+            trust_remote_code=self.trust_remote_code,
+        )
+        self._model = AutoModelForCausalLM.from_pretrained(
+            self.model_id,
+            torch_dtype=torch_dtype,
+            trust_remote_code=self.trust_remote_code,
+        ).to(self.device)
+        self._model.eval()
+
+    def encode(self, text: str) -> Any:
+        """Tokenize `text` to a device-resident tensor dict."""
+        toks = self.tokenizer(text, return_tensors="pt")
+        return {k: v.to(self.device) for k, v in toks.items()}
+
+    def forward(self, inputs: dict[str, Any]) -> Any:
+        """Run a single forward pass under `torch.inference_mode()`."""
+        import torch
+
+        with torch.inference_mode():
+            return self.model(**inputs, output_hidden_states=False, return_dict=True)

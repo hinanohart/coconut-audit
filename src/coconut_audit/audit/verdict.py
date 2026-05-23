@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from coconut_audit.core.types import AuditVerdict
 
-__all__ = ["AuditVerdict", "Verdict", "aggregate_verdict"]
+__all__ = ["AuditVerdict", "Verdict", "aggregate_verdict", "label_for_metric"]
 
 
 @dataclass(slots=True)
@@ -17,6 +17,27 @@ class Verdict:
     metric_name: str
     metric_value: float
     threshold: float
+
+
+def label_for_metric(
+    value: float, warn_at: float, fail_at: float, *, higher_is_worse: bool = True
+) -> AuditVerdict:
+    """Threshold a single metric into PASS / WARN / FAIL.
+
+    With `higher_is_worse=True` (default), FAIL fires when value >= fail_at,
+    WARN at value >= warn_at; otherwise the direction is flipped.
+    """
+    if higher_is_worse:
+        if value >= fail_at:
+            return AuditVerdict.FAIL
+        if value >= warn_at:
+            return AuditVerdict.WARN
+        return AuditVerdict.PASS
+    if value <= fail_at:
+        return AuditVerdict.FAIL
+    if value <= warn_at:
+        return AuditVerdict.WARN
+    return AuditVerdict.PASS
 
 
 def aggregate_verdict(verdicts: list[Verdict]) -> AuditVerdict:

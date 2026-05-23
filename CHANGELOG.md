@@ -25,4 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - v0.1.0 does **not** reproduce the full numerics of [arxiv:2512.21711](https://arxiv.org/abs/2512.21711); see the v0.2 roadmap for the planned reproduction.
 - v0.1.0 ships HF inference only. Self-trained SAEs and SSM backends arrive in v0.2.
+- **Safetensors-only policy**: pickle-backed `.pt` SAE artifacts are refused.
+  SAEs distributed only as `.pt` (e.g. `Goodfire/DeepSeek-R1-SAE-l37`) require
+  either upstream re-export or a community conversion adapter — both targeted
+  for v0.1.1.
 - Goodfire Llama 3.x Instruct, Qwen-Scope, and Gemma Scope 2 adapters land in v0.1.1+.

@@ -63,17 +63,22 @@ Then from the agent:
 
 ## Supported pretrained SAE coverage (v0.1.0)
 
-License-clean (Apache / MIT / CC-BY) primary targets:
+License-clean (Apache / MIT / CC-BY) primary targets shipping as **safetensors**:
 
 | Model family | SAE source | Hub URL | License |
 |---|---|---|---|
 | GPT-2 small | SAELens `gpt2-small-res-jb` | [jbloom/GPT2-Small-SAEs](https://huggingface.co/jbloom/GPT2-Small-SAEs) | MIT |
 | Pythia 70M / 160M | EleutherAI `sparsify` | [EleutherAI/sae-pythia-*](https://huggingface.co/EleutherAI) | MIT |
-| Llama 3.1 8B | EleutherAI / Llama Scope | [fnlp/Llama-Scope](https://huggingface.co/fnlp/Llama-Scope) | Apache-2.0 |
-| DeepSeek-R1 | Goodfire | [Goodfire/DeepSeek-R1-SAE-l37](https://huggingface.co/Goodfire/DeepSeek-R1-SAE-l37) | MIT |
+| Llama 3.1 8B | Llama Scope (fnlp) | [fnlp/Llama-Scope](https://huggingface.co/fnlp/Llama-Scope) | Apache-2.0 |
 | Gemma 2 | Gemma Scope | [google/gemma-scope](https://huggingface.co/google/gemma-scope) | CC-BY-4.0 |
 
-Community-contributed extensions (Goodfire Llama 3.x Instruct, Qwen-Scope, Gemma Scope 2) land in v0.1.1+. PRs welcome.
+**Safetensors-only policy**: `coconut-audit` refuses pickle-backed `.pt` artifacts
+to keep the supply chain auditable. SAEs distributed only as `.pt`
+(e.g. `Goodfire/DeepSeek-R1-SAE-l37`) become available once the publisher
+re-exports as safetensors, or via a community-contributed conversion adapter in v0.1.1+.
+
+Community-contributed extensions (Goodfire Instruct lines after safetensors export,
+Qwen-Scope, Gemma Scope 2) land in v0.1.1+. PRs welcome.
 
 ## Portfolio map (related hinanohart OSS)
 

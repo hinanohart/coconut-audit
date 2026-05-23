@@ -38,8 +38,13 @@ Out of scope:
 
 ## Hardening notes
 
-- `sae.load_pretrained_sae` validates safetensors metadata against tensor shapes
-  before construction. Treat unknown SAEs as untrusted code-adjacent artifacts.
+- **Safetensors-only loader policy.** `sae.load_pretrained_sae` refuses pickle-backed
+  `.pt` files; only `.safetensors` artifacts are accepted. This eliminates the
+  arbitrary-code-execution path documented in
+  [Trail of Bits' pickles-in-pytorch advisory](https://blog.trailofbits.com/2021/03/15/never-a-dill-moment-exploiting-machine-learning-pickle-files/).
+- `sae.load_pretrained_sae` additionally validates tensor shapes against the
+  declared `d_in` / `d_sae` before construction. Treat unknown SAEs as
+  untrusted code-adjacent artifacts even when they ship as safetensors.
 - `reports.render_html_report` HTML-escapes every user-controlled field via
   `jinja2`'s autoescape. We inherit the lesson from `recurrentlens 0.1.0.post1`
   (an XSS vector in unescaped report fields). Do not disable autoescape.
