@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pre-commit hooks.
 - Apache-2.0 license, SECURITY policy, CITATION.cff, CONTRIBUTING guide.
 
+### Notes
+
+- `transformers` 4.45 through 5.9+ are both supported. The `HFInferenceClient`
+  tries the modern `dtype=` keyword first (transformers >=5.0) and falls back
+  to the legacy `torch_dtype=` for 4.x. If you pin transformers >=5.0,
+  remember its default `dtype` shifted to `"auto"` — pass an explicit dtype
+  via `HFInferenceClient(dtype="float32")` for cross-version weight-hash
+  determinism.
+
 ### Known limitations
 
 - v0.1.0 does **not** reproduce the full numerics of [arxiv:2512.21711](https://arxiv.org/abs/2512.21711); see the v0.2 roadmap for the planned reproduction.

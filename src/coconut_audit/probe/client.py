@@ -36,7 +36,12 @@ class HFInferenceClient:
         return self._tokenizer
 
     def load(self) -> None:
-        """Lazily load model + tokenizer. Honors `COCONUT_AUDIT_SKIP_HF_DOWNLOAD`."""
+        """Lazily load model + tokenizer. Honors `COCONUT_AUDIT_SKIP_HF_DOWNLOAD`.
+
+        Cross-version transformers: tries `dtype=` first (transformers >=5.0,
+        where `torch_dtype=` is deprecated) and falls back to `torch_dtype=`
+        for transformers 4.x.
+        """
         if os.environ.get("COCONUT_AUDIT_SKIP_HF_DOWNLOAD", "0") == "1":
             raise RuntimeError(
                 "HFInferenceClient.load blocked by COCONUT_AUDIT_SKIP_HF_DOWNLOAD=1 "
@@ -46,17 +51,26 @@ class HFInferenceClient:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        torch_dtype: Any = "auto" if self.dtype == "auto" else getattr(torch, self.dtype)
+        resolved_dtype: Any = "auto" if self.dtype == "auto" else getattr(torch, self.dtype)
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_id,
             trust_remote_code=self.trust_remote_code,
         )
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_id,
-            torch_dtype=torch_dtype,
-            trust_remote_code=self.trust_remote_code,
-        ).to(self.device)
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                dtype=resolved_dtype,
+                trust_remote_code=self.trust_remote_code,
+            )
+        except TypeError:
+            # transformers <5.0 uses the legacy `torch_dtype=` keyword.
+            model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                torch_dtype=resolved_dtype,
+                trust_remote_code=self.trust_remote_code,
+            )
+        self._model = model.to(self.device)
         self._model.eval()
 
     def encode(self, text: str) -> Any:
