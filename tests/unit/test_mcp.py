@@ -17,6 +17,7 @@ from coconut_audit.mcp import (
     find_report_in_ledger,
     run_audit_pipeline,
 )
+from coconut_audit.mcp.tools import _validate_ledger_path
 
 
 def _cfg(probe: ProbeKind, *, seed: int = 0) -> AuditConfig:
@@ -77,7 +78,10 @@ def test_diff_reports_metric_deltas(tmp_path: Path) -> None:
     assert set(d["metric_deltas"]).issuperset({"latent_sensitivity", "cot_sensitivity", "ratio"})
 
 
-def test_audit_run_tool_returns_dict_and_appends_ledger(tmp_path: Path) -> None:
+def test_audit_run_tool_returns_dict_and_appends_ledger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("COCONUT_AUDIT_LEDGER_ROOT", str(tmp_path))
     ledger = tmp_path / "ledger.jsonl"
     out = audit_run(
         model_id="gpt2",
@@ -93,7 +97,8 @@ def test_audit_run_tool_returns_dict_and_appends_ledger(tmp_path: Path) -> None:
     assert ledger.exists()
 
 
-def test_audit_get_and_diff_tools(tmp_path: Path) -> None:
+def test_audit_get_and_diff_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COCONUT_AUDIT_LEDGER_ROOT", str(tmp_path))
     ledger = tmp_path / "ledger.jsonl"
     a = audit_run(
         model_id="gpt2",
@@ -118,3 +123,85 @@ def test_audit_get_and_diff_tools(tmp_path: Path) -> None:
     # both reports must JSON-serialize cleanly
     json.dumps(fetched)
     json.dumps(diffed)
+
+
+def test_validate_ledger_path_accepts_in_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    resolved = _validate_ledger_path("audit_reports/ledger.jsonl")
+    assert resolved == (tmp_path / "audit_reports" / "ledger.jsonl").resolve()
+    assert resolved.is_relative_to(tmp_path.resolve())
+
+
+def test_validate_ledger_path_default_is_in_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    resolved = _validate_ledger_path(None)
+    assert resolved.is_relative_to(tmp_path.resolve())
+
+
+def test_validate_ledger_path_rejects_traversal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match="out-of-bounds"):
+        _validate_ledger_path("../../etc/passwd")
+
+
+def test_validate_ledger_path_rejects_absolute_outside_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match="out-of-bounds"):
+        _validate_ledger_path("/etc/passwd")
+
+
+def test_validate_ledger_path_honors_ledger_root_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "ledgers"
+    root.mkdir()
+    monkeypatch.setenv("COCONUT_AUDIT_LEDGER_ROOT", str(root))
+    resolved = _validate_ledger_path("sub/ledger.jsonl")
+    assert resolved == (root / "sub" / "ledger.jsonl").resolve()
+    with pytest.raises(ValueError, match="out-of-bounds"):
+        _validate_ledger_path("../escape.jsonl")
+
+
+def test_audit_run_tool_rejects_traversal_ledger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match="out-of-bounds"):
+        audit_run(
+            model_id="gpt2",
+            sae_id="x",
+            probe="steering",
+            ledger_path="../../tmp/evil.jsonl",
+        )
+
+
+def test_audit_get_tool_rejects_absolute_ledger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match="out-of-bounds"):
+        audit_get("any-id", ledger_path="/etc/passwd")
+
+
+def test_audit_run_tool_in_base_ledger_round_trip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    out = audit_run(
+        model_id="gpt2",
+        sae_id="x",
+        probe="steering",
+        ledger_path="nested/ledger.jsonl",
+    )
+    ledger = tmp_path / "nested" / "ledger.jsonl"
+    assert ledger.exists()
+    fetched = audit_get(out["audit_id"], ledger_path="nested/ledger.jsonl")
+    assert fetched["audit_id"] == out["audit_id"]
