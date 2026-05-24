@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from coconut_audit.cli.main import cli
 
 
-def test_cli_run_demo_mode_emits_reports(tmp_path: Path) -> None:
+def test_cli_run_demo_mode_emits_reports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COCONUT_AUDIT_LEDGER_ROOT", str(tmp_path))
     runner = CliRunner()
     ledger = tmp_path / "ledger.jsonl"
     out_dir = tmp_path / "reports"
@@ -50,7 +52,8 @@ def test_cli_real_mode_raises_helpful_error() -> None:
     assert "v0.1.1" in result.output
 
 
-def test_cli_get_round_trip(tmp_path: Path) -> None:
+def test_cli_get_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COCONUT_AUDIT_LEDGER_ROOT", str(tmp_path))
     runner = CliRunner()
     ledger = tmp_path / "ledger.jsonl"
     out_dir = tmp_path / "reports"
@@ -79,7 +82,8 @@ def test_cli_get_round_trip(tmp_path: Path) -> None:
     assert payload["audit_id"] == audit_id
 
 
-def test_cli_diff_round_trip(tmp_path: Path) -> None:
+def test_cli_diff_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COCONUT_AUDIT_LEDGER_ROOT", str(tmp_path))
     runner = CliRunner()
     ledger = tmp_path / "ledger.jsonl"
     out_dir = tmp_path / "reports"

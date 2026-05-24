@@ -17,6 +17,19 @@ from typing import Any
 
 from coconut_audit.mcp.tools import audit_diff, audit_get, audit_run
 
+# Relative, traversal-free ledger path: no leading "/" (absolute) and no ".."
+# segment. Server-side `_validate_ledger_path` is the authoritative guard; this
+# schema constraint just rejects obviously out-of-bounds inputs at the edge.
+_LEDGER_PATH_SCHEMA: dict[str, Any] = {
+    "type": ["string", "null"],
+    "description": (
+        "Optional ledger path, relative to the COCONUT_AUDIT_LEDGER_ROOT base "
+        "(default: current working directory). Absolute paths and `..` traversal "
+        "are rejected."
+    ),
+    "pattern": r"^(?!/)(?!.*(^|/)\.\.(/|$)).*$",
+}
+
 _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "audit_run": {
         "description": (
@@ -39,7 +52,7 @@ _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
                 "n_samples": {"type": "integer", "default": 32},
                 "seed": {"type": "integer", "default": 0},
                 "demo_mode": {"type": "boolean", "default": True},
-                "ledger_path": {"type": ["string", "null"]},
+                "ledger_path": _LEDGER_PATH_SCHEMA,
             },
             "required": ["model_id", "sae_id"],
         },
@@ -50,7 +63,7 @@ _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "audit_id": {"type": "string"},
-                "ledger_path": {"type": ["string", "null"]},
+                "ledger_path": _LEDGER_PATH_SCHEMA,
             },
             "required": ["audit_id"],
         },
@@ -62,7 +75,7 @@ _TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "properties": {
                 "audit_id_a": {"type": "string"},
                 "audit_id_b": {"type": "string"},
-                "ledger_path": {"type": ["string", "null"]},
+                "ledger_path": _LEDGER_PATH_SCHEMA,
             },
             "required": ["audit_id_a", "audit_id_b"],
         },
