@@ -8,7 +8,7 @@ version = "0.1.0.post1"
 description = "Audit harness for continuous-latent chain-of-thought (Coconut / Quiet-STaR / TTC) — SAE-grounded steering & shortcut probes with an MCP server."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = "MIT"
 authors = [{name = "hinanohart"}]
 keywords = [
     "mechanistic-interpretability",
@@ -23,7 +23,7 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",

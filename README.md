@@ -3,7 +3,7 @@
 > Audit harness for continuous-latent chain-of-thought (Coconut / Quiet-STaR / Test-Time Compute) — SAE-grounded steering & shortcut probes with an MCP server.
 
 [![CI](https://github.com/hinanohart/coconut-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/hinanohart/coconut-audit/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
 
 **Status: v0.1.0 (alpha, framework + scaffold).** Pretrained SAE coverage and full reproduction of paper-grade metrics arrive in v0.1.1.
@@ -23,7 +23,7 @@ Recent work argues that continuous-latent reasoning (Coconut and successors) doe
 ## Why not X
 
 - **Anthropic's Circuit Tracer** is a Claude-internal tool — not an OSS framework you can point at `gpt2` / `pythia-160m` / `Llama-3.1-8B` from your terminal.
-- **Goodfire Ember** is a closed-source platform targeting Llama-family models behind an API; `coconut-audit` is an Apache-2.0 framework you can pin in CI, run offline, and extend to new families via a small `_FAMILY_HOOK_SITES` entry.
+- **Goodfire Ember** is a closed-source platform targeting Llama-family models behind an API; `coconut-audit` is an MIT framework you can pin in CI, run offline, and extend to new families via a small `_FAMILY_HOOK_SITES` entry.
 - **SAELens / sparsify** are excellent SAE training/inference libraries but stop short of an audit verdict; `coconut-audit` consumes their pretrained artifacts and adds the steering / shortcut / drift probes + MCP surface on top.
 
 ## Install
@@ -81,7 +81,7 @@ License-clean (Apache / MIT / CC-BY) primary targets shipping as **safetensors**
 |---|---|---|---|
 | GPT-2 small | SAELens `gpt2-small-res-jb` | [jbloom/GPT2-Small-SAEs](https://huggingface.co/jbloom/GPT2-Small-SAEs) | MIT |
 | Pythia 70M / 160M | EleutherAI `sparsify` | [EleutherAI/sae-pythia-*](https://huggingface.co/EleutherAI) | MIT |
-| Llama 3.1 8B | Llama Scope (fnlp) | [fnlp/Llama-Scope](https://huggingface.co/fnlp/Llama-Scope) | Apache-2.0 |
+| Llama 3.1 8B | Llama Scope (fnlp) | [fnlp/Llama-Scope](https://huggingface.co/fnlp/Llama-Scope) | MIT |
 | Gemma 2 | Gemma Scope | [google/gemma-scope](https://huggingface.co/google/gemma-scope) | CC-BY-4.0 |
 
 **Safetensors-only policy**: `coconut-audit` refuses pickle-backed `.pt` artifacts
@@ -112,4 +112,4 @@ See [CITATION.cff](./CITATION.cff).
 
 ## License
 
-[Apache-2.0](./LICENSE).
+[MIT](./LICENSE).
